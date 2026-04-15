@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>122 足球预测 · 泊松模型</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: system-ui, sans-serif; }
+        body { background: #eef2f6; display: flex; justify-content: center; align-items: center; min-height: 100vh; padding: 12px; }
+        .card { max-width: 480px; width: 100%; background: #ffffff; border-radius: 24px; padding: 20px; box-shadow: 0 8px 24px rgba(0,0,0,0.05); }
+        .header { display: flex; justify-content: space-between; margin-bottom: 16px; }
+        .title { font-size: 20px; font-weight: 700; color: #0f172a; }
+        .badge { background: #e2e8f0; padding: 4px 12px; border-radius: 20px; font-size: 12px; color: #475569; }
+        .match-panel { background: #f8fafc; border-radius: 16px; padding: 16px; margin-bottom: 18px; }
+        .team-row { display: flex; justify-content: space-between; margin: 8px 0; }
+        .team-name { font-size: 18px; font-weight: 600; }
+        .team-elo { font-size: 12px; color: #64748b; background: #eef2ff; padding: 2px 10px; border-radius: 20px; }
+        .match-time { text-align: center; font-size: 14px; color: #059669; font-weight: 600; margin: 10px 0; }
+        .prob-section { margin-bottom: 18px; }
+        .section-title { font-size: 15px; font-weight: 600; color: #334155; margin-bottom: 10px; display: flex; align-items: center; }
+        .section-title span { width: 6px; height: 18px; background: #3b82f6; border-radius: 6px; margin-right: 8px; }
+        .prob-row { display: flex; justify-content: space-between; margin: 8px 0; }
+        .prob-value { font-weight: 700; }
+        .home-win { color: #059669; }
+        .draw { color: #d97706; }
+        .away-win { color: #dc2626; }
+        .progress-bar-container { height: 10px; background: #e2e8f0; border-radius: 10px; margin: 12px 0; }
+        .progress-bar { height: 100%; border-radius: 10px; background: linear-gradient(90deg, #059669, #d97706, #dc2626); }
+        .score-item { background: #f1f5f9; padding: 6px 16px; border-radius: 30px; font-size: 14px; }
+        .factors-box { background: #f8fafc; border-radius: 16px; padding: 14px; margin-top: 16px; }
+        .factor-row { display: flex; align-items: center; gap: 8px; font-size: 13px; margin: 8px 0; }
+        .factor-bar { flex: 1; height: 8px; background: #e2e8f0; border-radius: 8px; }
+        .factor-fill-positive { height: 100%; background: #059669; border-radius: 8px; }
+        .factor-fill-negative { height: 100%; background: #dc2626; border-radius: 8px; }
+        .footer-note { text-align: center; font-size: 11px; color: #94a3b8; margin-top: 16px; }
+        .confidence { font-size: 12px; color: #64748b; margin-left: 4px; }
+    </style>
+</head>
+<body>
+<div class="card" id="app">
+    <div class="header">
+        <div class="title" id="matchTitle">蔚山现代 vs 首尔FC</div>
+        <div class="badge">V1.0 · 泊松融合</div>
+    </div>
+    <div class="match-panel">
+        <div class="team-row">
+            <span class="team-name" id="homeTeam">蔚山现代</span>
+            <span class="team-elo" id="homeElo">Elo: 1860</span>
+        </div>
+        <div class="team-row">
+            <span class="team-name" id="awayTeam">首尔FC</span>
+            <span class="team-elo" id="awayElo">Elo: 1790</span>
+        </div>
+        <div class="match-time" id="matchTime">2026-04-16 18:00 | 韩K联</div>
+    </div>
+    <div class="prob-section">
+        <div class="section-title"><span></span>核心概率</div>
+        <div class="prob-row"><span>主胜</span><span class="prob-value home-win" id="homeProb">48.2%</span></div>
+        <div class="prob-row"><span>平局</span><span class="prob-value draw" id="drawProb">31.5%</span></div>
+        <div class="prob-row"><span>客胜</span><span class="prob-value away-win" id="awayProb">20.3%</span></div>
+        <div class="progress-bar-container"><div class="progress-bar" style="width:48.2%"></div></div>
+    </div>
+    <div class="prob-section">
+        <div class="section-title"><span></span>比分预测</div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+            <span class="score-item">1-0 (13.3%)</span>
+            <span class="score-item">1-1 (11.9%)</span>
+            <span class="score-item">2-0 (10.4%)</span>
+        </div>
+    </div>
+    <div class="factors-box">
+        <div class="section-title"><span></span>关键影响因素</div>
+        <div class="factor-row"><span style="width:90px">近期状态</span><div class="factor-bar"><div class="factor-fill-positive" style="width:12%"></div></div><span style="color:#059669">+12%</span></div>
+        <div class="factor-row"><span style="width:90px">主场优势</span><div class="factor-bar"><div class="factor-fill-positive" style="width:8%"></div></div><span style="color:#059669">+8%</span></div>
+        <div class="factor-row"><span style="width:90px">伤停影响</span><div class="factor-bar"><div class="factor-fill-negative" style="width:5%"></div></div><span style="color:#dc2626">-5%</span></div>
+    </div>
+    <div class="footer-note">数据基于泊松模型 · 仅供体育分析参考</div>
+</div>
+</body>
+</html>
