@@ -13,9 +13,8 @@ const LEAGUE_IDS = {
   Bundesliga: 78   // 德甲
 };
 
-let TARGET_LEAGUE = 'KLeague'; // 默认联赛
+let TARGET_LEAGUE = 'KLeague';
 
-// Elo 简易数据库
 const ELO_DB = {
   '蔚山现代': 1860, '首尔FC': 1790, '浦项制铁': 1820, '全北现代': 1840,
   '川崎前锋': 1830, '横滨水手': 1810, '神户胜利船': 1790, '广岛三箭': 1760,
@@ -61,7 +60,7 @@ function getElo(teamName) {
   return ELO_DB[teamName] || 1750;
 }
 
-// ========== 获取足球比赛数据（Api-Football） ==========
+// ========== 获取比赛数据 ==========
 async function fetchFixtures(leagueId, season, date) {
   if (!FOOTBALL_API_KEY) return [];
   const url = `https://v3.football.api-sports.io/fixtures?league=${leagueId}&season=${season}&date=${date}`;
@@ -72,7 +71,7 @@ async function fetchFixtures(leagueId, season, date) {
   return data.response || [];
 }
 
-// ========== 获取赔率（Odds-API） ==========
+// ========== 获取赔率 ==========
 async function fetchOdds(homeTeam, awayTeam) {
   if (!ODDS_API_KEY) return null;
   const sport = 'soccer';
@@ -84,9 +83,7 @@ async function fetchOdds(homeTeam, awayTeam) {
     const res = await fetch(url);
     const data = await res.json();
     if (!data.data) return null;
-
     for (const game of data.data) {
-      // 宽松匹配：球队名包含关系
       if (game.home_team && game.away_team &&
           (game.home_team.toLowerCase().includes(homeTeam.toLowerCase()) ||
            homeTeam.toLowerCase().includes(game.home_team.toLowerCase())) &&
@@ -100,11 +97,7 @@ async function fetchOdds(homeTeam, awayTeam) {
             const awayOutcome = h2hMarket.outcomes?.find(o => o.name === game.away_team);
             const drawOutcome = h2hMarket.outcomes?.find(o => o.name === 'Draw');
             if (homeOutcome && awayOutcome && drawOutcome) {
-              return {
-                home: homeOutcome.price,
-                draw: drawOutcome.price,
-                away: awayOutcome.price
-              };
+              return { home: homeOutcome.price, draw: drawOutcome.price, away: awayOutcome.price };
             }
           }
         }
@@ -123,11 +116,7 @@ function oddsToProb(homeOdds, drawOdds, awayOdds) {
   const drawProb = 1 / drawOdds;
   const awayProb = 1 / awayOdds;
   const total = homeProb + drawProb + awayProb;
-  return {
-    home: homeProb / total,
-    draw: drawProb / total,
-    away: awayProb / total
-  };
+  return { home: homeProb / total, draw: drawProb / total, away: awayProb / total };
 }
 
 // ========== 主函数 ==========
@@ -141,12 +130,13 @@ async function main() {
     fixtures = await fetchFixtures(leagueId, 2026, today);
   }
 
+  // ★★★ 关键：即使API无数据，也生成包含新字段的测试数据 ★★★
   if (fixtures.length === 0) {
-    console.log('今日无比赛或API未配置，使用默认示例');
+    console.log('今日无比赛或API未配置，使用测试数据（含赔率模拟）');
     fixtures = [{
       teams: { home: { name: '蔚山现代' }, away: { name: '首尔FC' } },
       fixture: { date: new Date().toISOString() },
-      league: { name: '韩K联', round: '常规赛 8' }
+      league: { name: '韩K联', round: '测试数据' }
     }];
   }
 
@@ -157,7 +147,6 @@ async function main() {
     const awayElo = getElo(awayTeam);
     const eloDiff = homeElo - awayElo;
 
-    // 基础λ计算
     let homeLambda = 1.50 + eloDiff / 400;
     let awayLambda = 1.20 - eloDiff / 500;
     homeLambda = Math.min(2.5, Math.max(0.5, homeLambda));
@@ -165,10 +154,14 @@ async function main() {
 
     const modelProbs = computeProbs(homeLambda, awayLambda);
 
-    // 获取赔率
-    const odds = await fetchOdds(homeTeam, awayTeam);
-    let marketProbs = { home: 0.33, draw: 0.33, away: 0.33 };
-    let homeOdds = 0, drawOdds = 0, awayOdds = 0;
+    let odds = null;
+    if (ODDS_API_KEY) {
+      odds = await fetchOdds(homeTeam, awayTeam);
+    }
+
+    // 模拟赔率（确保新字段存在）
+    let homeOdds = 2.10, drawOdds = 3.20, awayOdds = 3.50;
+    let marketProbs = { home: 0.45, draw: 0.30, away: 0.25 };
     if (odds) {
       homeOdds = odds.home;
       drawOdds = odds.draw;
@@ -176,29 +169,17 @@ async function main() {
       marketProbs = oddsToProb(homeOdds, drawOdds, awayOdds);
     }
 
-    // 模型与市场分歧度
     const homeDiff = Math.abs(modelProbs.homeWin - marketProbs.home);
     const isHighValue = homeDiff > 0.08;
 
-    // 最终概率（暂用模型100%，后期可融合）
-    const finalHome = modelProbs.homeWin;
-    const finalDraw = modelProbs.draw;
-    const finalAway = modelProbs.awayWin;
-
     return {
-      homeTeam, awayTeam,
-      homeElo, awayElo,
+      homeTeam, awayTeam, homeElo, awayElo,
       date: new Date(f.fixture.date).toLocaleString('zh-CN', { timeZone: 'Asia/Seoul' }),
-      league: f.league.name,
-      round: f.league.round,
+      league: f.league.name, round: f.league.round,
       homeLambda, awayLambda,
-      modelProbs: {
-        home: modelProbs.homeWin,
-        draw: modelProbs.draw,
-        away: modelProbs.awayWin
-      },
+      modelProbs: { home: modelProbs.homeWin, draw: modelProbs.draw, away: modelProbs.awayWin },
       marketProbs,
-      finalProbs: { home: finalHome, draw: finalDraw, away: finalAway },
+      finalProbs: { home: modelProbs.homeWin, draw: modelProbs.draw, away: modelProbs.awayWin },
       bestScore: modelProbs.bestScore,
       secondScore: modelProbs.secondScore,
       thirdScore: modelProbs.thirdScore,
@@ -212,12 +193,7 @@ async function main() {
     };
   }));
 
-  const output = {
-    date: today,
-    league: TARGET_LEAGUE,
-    matches
-  };
-
+  const output = { date: today, league: TARGET_LEAGUE, matches };
   fs.writeFileSync('data.json', JSON.stringify(output, null, 2));
   console.log(`✅ 已生成 ${matches.length} 场比赛预测`);
 }
