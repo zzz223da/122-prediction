@@ -1,9 +1,12 @@
 {
   "name": "122-prediction",
   "version": "1.0.0",
-  "description": "足球预测泊松模型卡片",
+  "description": "足球预测泊松模型",
   "main": "update.js",
   "scripts": {
     "update": "node update.js"
+  },
+  "dependencies": {
+    "node-fetch": "^2.6.9"
   }
 }
