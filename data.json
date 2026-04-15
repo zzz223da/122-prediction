@@ -1,0 +1,23 @@
+{
+  "date": "2026-04-16",
+  "league": "韩K联",
+  "matches": [
+    {
+      "homeTeam": "蔚山现代",
+      "awayTeam": "首尔FC",
+      "homeElo": 1860,
+      "awayElo": 1790,
+      "date": "2026-04-16 18:00",
+      "league": "韩K联 第8轮",
+      "homeLambda": 1.56,
+      "awayLambda": 1.12,
+      "factors": [
+        { "name": "近期状态", "contribution": 0.12 },
+        { "name": "主场优势", "contribution": 0.08 },
+        { "name": "历史交锋", "contribution": 0.03 },
+        { "name": "伤停影响", "contribution": -0.05 },
+        { "name": "天气因素", "contribution": -0.02 }
+      ]
+    }
+  ]
+}
