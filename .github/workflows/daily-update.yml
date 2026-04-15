@@ -10,6 +10,7 @@ jobs:
     runs-on: ubuntu-latest
     env:
       FOOTBALL_API_KEY: ${{ secrets.FOOTBALL_API_KEY }}
+      ODDS_API_KEY: ${{ secrets.ODDS_API_KEY }}
     steps:
       - uses: actions/checkout@v3
       - uses: actions/setup-node@v3
